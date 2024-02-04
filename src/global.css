@@ -57,5 +57,11 @@
   }
   body {
     @apply bg-background text-foreground;
+    
+  }
+}
+@layer base {
+  body::-webkit-scrollbar {
+    display: none;
   }
 }

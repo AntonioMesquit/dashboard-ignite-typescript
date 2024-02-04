@@ -16,7 +16,7 @@ export function Header() {
             <Home className="h-4 w-4" />
             Início
           </NavLink>
-          <NavLink to="/pedidos">
+          <NavLink to="/orders">
             <MonitorCheck className="h-4 w-4" />
             Pedidos
           </NavLink>
