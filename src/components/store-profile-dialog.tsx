@@ -1,10 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { GetManagerRestaurant } from '@/api/get-manager-restaurant'
+import {
+  GetManagerRestaurant,
+  GetManagerRestaurantReponse,
+} from '@/api/get-manager-restaurant'
 import { UpdateProfile } from '@/api/update-profile'
 
 import { Button } from './ui/button'
@@ -22,11 +25,12 @@ import { Textarea } from './ui/textarea'
 
 const storeProfileSchema = z.object({
   name: z.string().min(1),
-  description: z.string(),
+  description: z.string().nullable(),
 })
 type StoreProfileSchema = z.infer<typeof storeProfileSchema>
 
 export function StoreProfileDialog() {
+  const queryClient = useQueryClient()
   const { data: manager } = useQuery({
     queryKey: ['managed-restaurant'],
     queryFn: GetManagerRestaurant,
@@ -43,8 +47,33 @@ export function StoreProfileDialog() {
       description: manager?.description || '',
     },
   })
+  function updateManagerCache({ name, description }: StoreProfileSchema) {
+    const cached = queryClient.getQueryData<GetManagerRestaurantReponse>([
+      'managed-restaurant',
+    ])
+    if (cached) {
+      queryClient.setQueryData<GetManagerRestaurantReponse>(
+        ['managed-restaurant'],
+        {
+          ...cached,
+          name,
+          description,
+        },
+      )
+    }
+    return { cached }
+  }
   const { mutateAsync: updateProfile } = useMutation({
     mutationFn: UpdateProfile,
+    onMutate({ name, description }) {
+      const { cached } = updateManagerCache({ name, description })
+      return { previuosProfile: cached }
+    },
+    onError(_, __, context) {
+      if (context?.previuosProfile) {
+        updateManagerCache(context.previuosProfile)
+      }
+    },
   })
   async function handleUpdateProfile(data: StoreProfileSchema) {
     try {
